@@ -165,7 +165,7 @@ def render_page_content(pathname):
                 sort_action="native",  # enables data to be sorted per-column by user or not ('none')
                 sort_mode="single",  # sort across 'multi' or 'single' columns
                 page_action="native",  # all data is passed to the table up-front or not ('none')
-                page_size=50,  # number of rows visible per page
+                page_size=15,  # number of rows visible per page
                 style_cell={  # ensure adequate header width when text is shorter than cell's text
                     "minWidth": 95,
                     "maxWidth": 200,
@@ -207,7 +207,7 @@ def render_page_content(pathname):
                     sort_action="native",  # enables data to be sorted per-column by user or not ('none')
                     sort_mode="single",  # sort across 'multi' or 'single' columns
                     page_action="native",  # all data is passed to the table up-front or not ('none')
-                    page_size=15,  # number of rows visible per page
+                    page_size=50,  # number of rows visible per page
                     style_cell={  # ensure adequate header width when text is shorter than cell's text
                         "minWidth": 95,
                         "maxWidth": 200,

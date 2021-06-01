@@ -12,10 +12,12 @@ import plotly.express as px
 import dash_table
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
+import requests
+from bs4 import BeautifulSoup
+
 
 url_kor = "https://finance.naver.com/api/sise/etfItemList.nhn?etfType=0&targetColumn=market_sum&sortOrder=desc"
 url_for = "https://finance.naver.com/api/sise/etfItemList.nhn?etfType=4&targetColumn=market_sum&sortOrder=desc"
-url_tot = "https://finance.naver.com/api/sise/etfItemList.nhn?etfType=4&targetColumn=market_sum&sortOrder=desc"
 etf_kor_data = pd.DataFrame(requests.get(url_kor).json()["result"]['etfItemList'])
 etf_for_data = pd.DataFrame(requests.get(url_for).json()["result"]['etfItemList'])
 
@@ -40,6 +42,56 @@ kor_rtn_top.columns = ['ETF명', '일간수익률', '3개월수익률','거래�
 for_rtn_top = for_rtn_top[['itemname', 'changeRate', 'threeMonthEarnRate', 'quant', 'amonut','marketSum']]
 for_rtn_top.columns = ['ETF명', '일간수익률', '3개월수익률','거래량','거래금액','시가총액']
 
+
+def crawl(url):
+    data = requests.get(url)
+    print(data)
+    return data.content
+
+def getStockInfo(tr):
+    tds = tr.findAll("td")
+    rank = tds[0].text
+    aTag = tds[1].find("a")
+    href = aTag["href"]
+    name = aTag.text
+    Price = tds[2].text
+    Volume = tds[9].text
+    PER = tds[10].text
+    ROE = tds[11].text
+    return {"rank":rank, "name":name, "href":href, "code":href[20:],
+            "nowPrice":Price, "Volume":Volume, "PER":PER, "ROE":ROE}
+
+def parse(pageString):
+    bsObj = BeautifulSoup(pageString, "html.parser")
+    box_type_l = bsObj.find("div", {"class":"box_type_l"})
+    type_2 = box_type_l.find("table",{"class":"type_2"})
+    tbody = type_2.find("tbody")
+    trs = tbody.findAll("tr")
+    stockInfos = []
+    for tr in trs:
+        try:
+            stockInfo = getStockInfo(tr)
+            stockInfos.append(stockInfo)
+        except Exception as e:
+            print("error")
+            pass
+    return stockInfos
+
+def getSiseMarketSum(sosok, page):
+    url = "https://finance.naver.com/sise/sise_market_sum.nhn?sosok={}&page={}".format(sosok, page)
+    pageString = crawl(url)
+    list = parse(pageString)
+    return list
+
+result = []
+
+for page in range(1, 3 + 1):
+    list = getSiseMarketSum(0, page) #0 코스피 1코스닥
+    result += list
+print(result)
+
+secu_data = pd.DataFrame(result)
+
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -56,8 +108,8 @@ SIDEBAR_STYLE = {
 }
 
 CONTENT_STYLE = {
-    "margin-left": "18rem",
-    "margin-right": "2rem",
+    "margin-left": "17rem",
+    "margin-right": "1rem",
     "padding": "2rem 1rem",
 }
 
@@ -89,52 +141,97 @@ app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
 def render_page_content(pathname):
     if pathname == "/KOREA":
         return html.Div([
-        html.H3("국내 ETF 3M 수익률/거래량 차트"),
-        dcc.Graph(
-            id = 'my-graph',
-            style={'height': 600},
-            figure = kor_rtn
-        ),
-        dash_table.DataTable(
-            id="datatable-interactivity",
-            columns=[
-                {
-                    "name": i,
-                    "id": i,
-                    "deletable": False,
-                    "selectable": True,
-                    "hideable": False,
-                }
-                for i in kor_rtn_top.columns
-            ],
-            data=kor_rtn_top.to_dict("records"),  # the contents of the table
-            sort_action="native",  # enables data to be sorted per-column by user or not ('none')
-            sort_mode="single",  # sort across 'multi' or 'single' columns
-            page_action="native",  # all data is passed to the table up-front or not ('none')
-            page_size=15,  # number of rows visible per page
-            style_cell={  # ensure adequate header width when text is shorter than cell's text
-                "minWidth": 95,
-                "maxWidth": 200,
-                "width": 95,
-            },
-            # style_cell_conditional={
-            #     'textAlign': 'left'
-            # },
-            style_data={  # overflow cells' content into multiple lines
-                "whiteSpace": "normal",
-                "height": "auto",
-            },
-            style_data_conditional=[
-                {
-                    'if': {'row_index': 'odd'},
-                    'backgroundColor': 'rgb(248, 248, 248)'
-                }
-            ],
-            style_header={
-                'backgroundColor': 'rgb(230, 230, 230)',
-                'fontWeight': 'bold'
-            }
-        )
+    dcc.Tabs([
+        dcc.Tab(label = "3M 수익률/거래량", children = [
+            html.H3("국내 ETF 차트"),
+            dcc.Graph(
+                id = 'my-graph',
+                style={'height': 600},
+                figure = kor_rtn
+            ),
+            dash_table.DataTable(
+                id="datatable-interactivity",
+                columns=[
+                    {
+                        "name": i,
+                        "id": i,
+                        "deletable": False,
+                        "selectable": True,
+                        "hideable": False,
+                    }
+                    for i in kor_rtn_top.columns
+                ],
+                data=kor_rtn_top.to_dict("records"),  # the contents of the table
+                sort_action="native",  # enables data to be sorted per-column by user or not ('none')
+                sort_mode="single",  # sort across 'multi' or 'single' columns
+                page_action="native",  # all data is passed to the table up-front or not ('none')
+                page_size=50,  # number of rows visible per page
+                style_cell={  # ensure adequate header width when text is shorter than cell's text
+                    "minWidth": 95,
+                    "maxWidth": 200,
+                    "width": 95,
+                },
+                # style_cell_conditional={
+                #     'textAlign': 'left'
+                # },
+                style_data={  # overflow cells' content into multiple lines
+                    "whiteSpace": "normal",
+                    "height": "auto",
+                },
+                style_data_conditional=[
+                    {
+                        'if': {'row_index': 'odd'},
+                        'backgroundColor': 'rgb(248, 248, 248)'
+                    }
+                ],
+                style_header={
+                    'backgroundColor': 'rgb(230, 230, 230)',
+                    'fontWeight': 'bold'
+                })
+            ]),
+            dcc.Tab(label="개별종목", children=[
+                html.H3("종목 주가 정보"),
+                dash_table.DataTable(
+                    id="datatable-interactivity_secu",
+                    columns=[
+                        {
+                            "name": i,
+                            "id": i,
+                            "deletable": False,
+                            "selectable": True,
+                            "hideable": False,
+                        }
+                        for i in secu_data.columns
+                    ],
+                    data=secu_data.to_dict("records"),  # the contents of the table
+                    sort_action="native",  # enables data to be sorted per-column by user or not ('none')
+                    sort_mode="single",  # sort across 'multi' or 'single' columns
+                    page_action="native",  # all data is passed to the table up-front or not ('none')
+                    page_size=15,  # number of rows visible per page
+                    style_cell={  # ensure adequate header width when text is shorter than cell's text
+                        "minWidth": 95,
+                        "maxWidth": 200,
+                        "width": 95,
+                    },
+                    # style_cell_conditional={
+                    #     'textAlign': 'left'
+                    # },
+                    style_data={  # overflow cells' content into multiple lines
+                        "whiteSpace": "normal",
+                        "height": "auto",
+                    },
+                    style_data_conditional=[
+                        {
+                            'if': {'row_index': 'odd'},
+                            'backgroundColor': 'rgb(248, 248, 248)'
+                        }
+                    ],
+                    style_header={
+                        'backgroundColor': 'rgb(230, 230, 230)',
+                        'fontWeight': 'bold'
+                    })
+                ])
+            ])
         ])
     elif pathname == "/INTERNATIONAL":
         return html.Div([

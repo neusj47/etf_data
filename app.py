@@ -15,6 +15,7 @@ import dash_bootstrap_components as dbc
 
 url_kor = "https://finance.naver.com/api/sise/etfItemList.nhn?etfType=0&targetColumn=market_sum&sortOrder=desc"
 url_for = "https://finance.naver.com/api/sise/etfItemList.nhn?etfType=4&targetColumn=market_sum&sortOrder=desc"
+url_tot = "https://finance.naver.com/api/sise/etfItemList.nhn?etfType=4&targetColumn=market_sum&sortOrder=desc"
 etf_kor_data = pd.DataFrame(requests.get(url_kor).json()["result"]['etfItemList'])
 etf_for_data = pd.DataFrame(requests.get(url_for).json()["result"]['etfItemList'])
 
@@ -32,6 +33,7 @@ kor_fig_amt = px.scatter(kor_amt_top, x='amonut', y='threeMonthEarnRate', color 
 kor_rtn = px.scatter(kor_amt_top, x='amonut', y='threeMonthEarnRate', color = 'itemname', custom_data=['changeRate'])
 for_fig_amt = px.scatter(for_amt_top, x='amonut', y='threeMonthEarnRate', color = 'itemname', custom_data=['quant'])
 for_rtn = px.scatter(for_amt_top, x='amonut', y='threeMonthEarnRate', color = 'itemname', custom_data=['changeRate'])
+
 
 kor_rtn_top = kor_rtn_top[['itemname', 'changeRate', 'threeMonthEarnRate', 'quant', 'amonut','marketSum']]
 kor_rtn_top.columns = ['ETF명', '일간수익률', '3개월수익률','거래량','거래금액','시가총액']

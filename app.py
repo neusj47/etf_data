@@ -90,7 +90,14 @@ for page in range(1, 3 + 1):
     result += list
 print(result)
 
+result_dq = []
+for page in range(1, 3 + 1):
+    list = getSiseMarketSum(1, page) #0 코스피 1코스닥
+    result_dq += list
+print(result_dq)
+
 secu_data = pd.DataFrame(result)
+secu_data_dq = pd.DataFrame(result_dq)
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -189,7 +196,7 @@ def render_page_content(pathname):
                     'fontWeight': 'bold'
                 })
             ]),
-            dcc.Tab(label="개별종목", children=[
+            dcc.Tab(label="KOSPI", children=[
                 html.H3("종목 주가 정보"),
                 dash_table.DataTable(
                     id="datatable-interactivity_secu",
@@ -207,7 +214,7 @@ def render_page_content(pathname):
                     sort_action="native",  # enables data to be sorted per-column by user or not ('none')
                     sort_mode="single",  # sort across 'multi' or 'single' columns
                     page_action="native",  # all data is passed to the table up-front or not ('none')
-                    page_size=50,  # number of rows visible per page
+                    page_size=20,  # number of rows visible per page
                     style_cell={  # ensure adequate header width when text is shorter than cell's text
                         "minWidth": 95,
                         "maxWidth": 200,
@@ -230,8 +237,50 @@ def render_page_content(pathname):
                         'backgroundColor': 'rgb(230, 230, 230)',
                         'fontWeight': 'bold'
                     })
-                ])
+                ]),
+        dcc.Tab(label="KOSDAQ", children=[
+            html.H3("종목 주가 정보"),
+            dash_table.DataTable(
+                id="datatable-interactivity_secu",
+                columns=[
+                    {
+                        "name": i,
+                        "id": i,
+                        "deletable": False,
+                        "selectable": True,
+                        "hideable": False,
+                    }
+                    for i in secu_data_dq.columns
+                ],
+                data=secu_data_dq.to_dict("records"),  # the contents of the table
+                sort_action="native",  # enables data to be sorted per-column by user or not ('none')
+                sort_mode="single",  # sort across 'multi' or 'single' columns
+                page_action="native",  # all data is passed to the table up-front or not ('none')
+                page_size=20,  # number of rows visible per page
+                style_cell={  # ensure adequate header width when text is shorter than cell's text
+                    "minWidth": 95,
+                    "maxWidth": 200,
+                    "width": 95,
+                },
+                # style_cell_conditional={
+                #     'textAlign': 'left'
+                # },
+                style_data={  # overflow cells' content into multiple lines
+                    "whiteSpace": "normal",
+                    "height": "auto",
+                },
+                style_data_conditional=[
+                    {
+                        'if': {'row_index': 'odd'},
+                        'backgroundColor': 'rgb(248, 248, 248)'
+                    }
+                ],
+                style_header={
+                    'backgroundColor': 'rgb(230, 230, 230)',
+                    'fontWeight': 'bold'
+                })
             ])
+        ])
         ])
     elif pathname == "/INTERNATIONAL":
         return html.Div([
